@@ -4,33 +4,26 @@ class HTMLParserHelper:
     """Hỗ trợ phân tích HTML để lấy link theo điều kiện."""
 
     @staticmethod
-    def extract_first_apk_link(html_data):
-        """Lấy link từ <a class='accent_color'> có chứa 'APK'."""
+    def extract_apk_link(html_data):
+        """Lấy link từ <a class='accent_color'> có 'APK' phía sau nó."""
         from html.parser import HTMLParser
 
         class APKLinkParser(HTMLParser):
             def __init__(self):
                 super().__init__()
-                self.found_link = None
-                self.capture_text = False
-                self.current_link = None
+                self.last_link = None  # Lưu link gần nhất của <a class="accent_color">
+                self.found_link = None  
 
             def handle_starttag(self, tag, attrs):
                 if tag == "a":
                     attrs_dict = dict(attrs)
-                    href = attrs_dict.get("href")  # Kiểm tra nếu có 'href' mới lấy
+                    href = attrs_dict.get("href")  # Kiểm tra nếu có 'href'
                     if href and "class" in attrs_dict and "accent_color" in attrs_dict["class"]:
-                        self.current_link = href
-                        self.capture_text = True  
+                        self.last_link = href  # Cập nhật link gần nhất
 
             def handle_data(self, data):
-                if self.capture_text and "APK" in data and not self.found_link:
-                    self.found_link = self.current_link  
-
-            def handle_endtag(self, tag):
-                if tag == "a":
-                    self.capture_text = False
-                    self.current_link = None
+                if "APK" in data and self.last_link and not self.found_link:
+                    self.found_link = self.last_link  # Khi gặp "APK", lấy link gần nhất
 
         parser = APKLinkParser()
         parser.feed(html_data)
@@ -66,10 +59,10 @@ headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 }
 
-# Bước 1: Lấy link đầu tiên từ <a class="accent_color"> chứa "APK"
+# Bước 1: Lấy link APK
 response = client.get("/apk/google-inc/youtube/youtube-19-44-39-release/", headers=headers)
 if response["status_code"] == 200:
-    apk_link = HTMLParserHelper.extract_first_apk_link(response["body"])
+    apk_link = HTMLParserHelper.extract_apk_link(response["body"])
     if apk_link:
         print("Link APK:", apk_link)
     else:
