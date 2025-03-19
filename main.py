@@ -51,17 +51,17 @@ class HTMLParserHelper:
         return parser.found_link
 
 
-def follow_redirects(client, url, headers, max_redirects=5):
-    """Xử lý tự động chuyển hướng 302 để lấy URL cuối cùng."""
+def handle_redirects(client, url, headers, max_redirects=5):
+    """Tự động xử lý redirect 307, 302 để lấy URL cuối cùng."""
     for _ in range(max_redirects):
         response = client.get(url, headers=headers)
-        if response["status_code"] in (301, 302):  # Nếu bị redirect
+        if response["status_code"] in (301, 302, 307):  # Nếu bị redirect
             url = response["headers"].get("Location")  # Lấy URL mới
             if not url:
                 break
         else:
             return response  # Trả về response khi không còn redirect
-    return None  # Hết số lần redirect mà vẫn không tải được
+    return None  # Quá số lần redirect mà vẫn lỗi
 
 
 # ========== KẾT NỐI & TẢI DỮ LIỆU ==========
@@ -105,8 +105,8 @@ else:
     exit()
 
 # Bước 3: Lấy HTML từ link "key=" lần 1 và tìm link "key=" lần 2
-response = client.get(key_link1, headers=headers)
-if response["status_code"] == 200:
+response = handle_redirects(client, key_link1, headers)
+if response and response["status_code"] == 200:
     key_link2 = HTMLParserHelper.extract_first_key_link(response["body"])
     if key_link2:
         print("🔹 Link chứa 'key=' (lần 2):", key_link2)
@@ -115,12 +115,12 @@ if response["status_code"] == 200:
         client.close()
         exit()
 else:
-    print("❌ Không thể tải trang, mã lỗi:", response["status_code"])
+    print("❌ Không thể tải trang, mã lỗi:", response["status_code"] if response else "Redirect quá nhiều lần")
     client.close()
     exit()
 
-# Bước 4: Tải file từ link "key=" lần 2 (xử lý redirect 302)
-response = follow_redirects(client, key_link2, headers)
+# Bước 4: Tải file từ link "key=" lần 2
+response = handle_redirects(client, key_link2, headers)
 if response and response["status_code"] == 200:
     file_name = "youtube-v.19.44.39.apk"
     with open(file_name, "wb") as f:
