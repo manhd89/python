@@ -5,25 +5,25 @@ class HTMLParserHelper:
 
     @staticmethod
     def extract_apk_link(html_data):
-        """Lấy link từ <a class='accent_color'> có 'APK' phía sau nó."""
+        """Lấy link từ <a class='accent_color'> có 'android-apk-download/' ở cuối và 'APK' gần nhất phía sau."""
         from html.parser import HTMLParser
 
         class APKLinkParser(HTMLParser):
             def __init__(self):
                 super().__init__()
-                self.last_link = None  # Lưu link gần nhất của <a class="accent_color">
+                self.last_valid_link = None  # Lưu link có 'android-apk-download/' ở cuối
                 self.found_link = None  
 
             def handle_starttag(self, tag, attrs):
                 if tag == "a":
                     attrs_dict = dict(attrs)
                     href = attrs_dict.get("href")  # Kiểm tra nếu có 'href'
-                    if href and "class" in attrs_dict and "accent_color" in attrs_dict["class"]:
-                        self.last_link = href  # Cập nhật link gần nhất
+                    if href and href.endswith("android-apk-download/"):
+                        self.last_valid_link = href  # Cập nhật link hợp lệ gần nhất
 
             def handle_data(self, data):
-                if "APK" in data and self.last_link and not self.found_link:
-                    self.found_link = self.last_link  # Khi gặp "APK", lấy link gần nhất
+                if "APK" in data and self.last_valid_link and not self.found_link:
+                    self.found_link = self.last_valid_link  # Khi gặp "APK", lấy link hợp lệ gần nhất
 
         parser = APKLinkParser()
         parser.feed(html_data)
