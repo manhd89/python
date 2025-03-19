@@ -68,7 +68,10 @@ def follow_redirects(client, url, headers, max_redirects=5):
 client = HttpClient("https://www.apkmirror.com")
 
 headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Referer": "https://www.apkmirror.com/",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Connection": "keep-alive"
 }
 
 # Bước 1: Lấy link APK
@@ -76,13 +79,13 @@ response = client.get("/apk/google-inc/youtube/youtube-19-44-39-release/", heade
 if response["status_code"] == 200:
     apk_link = HTMLParserHelper.extract_apk_link(response["body"])
     if apk_link:
-        print("Link APK:", apk_link)
+        print("🔹 Link APK:", apk_link)
     else:
-        print("Không tìm thấy link APK.")
+        print("❌ Không tìm thấy link APK.")
         client.close()
         exit()
 else:
-    print("Không thể tải trang, mã lỗi:", response["status_code"])
+    print("❌ Không thể tải trang, mã lỗi:", response["status_code"])
     client.close()
     exit()
 
@@ -91,13 +94,13 @@ response = client.get(apk_link, headers=headers)
 if response["status_code"] == 200:
     key_link1 = HTMLParserHelper.extract_first_key_link(response["body"])
     if key_link1:
-        print("Link chứa 'key=' (lần 1):", key_link1)
+        print("🔹 Link chứa 'key=' (lần 1):", key_link1)
     else:
-        print("Không tìm thấy link chứa 'key=' lần 1.")
+        print("❌ Không tìm thấy link chứa 'key=' lần 1.")
         client.close()
         exit()
 else:
-    print("Không thể tải trang, mã lỗi:", response["status_code"])
+    print("❌ Không thể tải trang, mã lỗi:", response["status_code"])
     client.close()
     exit()
 
@@ -106,24 +109,25 @@ response = client.get(key_link1, headers=headers)
 if response["status_code"] == 200:
     key_link2 = HTMLParserHelper.extract_first_key_link(response["body"])
     if key_link2:
-        print("Link chứa 'key=' (lần 2):", key_link2)
+        print("🔹 Link chứa 'key=' (lần 2):", key_link2)
     else:
-        print("Không tìm thấy link chứa 'key=' lần 2.")
+        print("❌ Không tìm thấy link chứa 'key=' lần 2.")
         client.close()
         exit()
 else:
-    print("Không thể tải trang, mã lỗi:", response["status_code"])
+    print("❌ Không thể tải trang, mã lỗi:", response["status_code"])
     client.close()
     exit()
 
 # Bước 4: Tải file từ link "key=" lần 2 (xử lý redirect 302)
 response = follow_redirects(client, key_link2, headers)
 if response and response["status_code"] == 200:
-    with open("youtube-v.19.44.39.apk", "wb") as f:
+    file_name = "youtube-v.19.44.39.apk"
+    with open(file_name, "wb") as f:
         f.write(response["body"])
-    print("File đã được tải xuống thành công: youtube-v.19.44.39.apk")
+    print(f"✅ File đã được tải xuống thành công: {file_name}")
 else:
-    print("Không thể tải file, mã lỗi:", response["status_code"] if response else "Redirect quá nhiều lần")
+    print("❌ Không thể tải file, mã lỗi:", response["status_code"] if response else "Redirect quá nhiều lần")
 
 # Đóng kết nối
 client.close()
