@@ -18,8 +18,9 @@ class HTMLParserHelper:
             def handle_starttag(self, tag, attrs):
                 if tag == "a":
                     attrs_dict = dict(attrs)
-                    if "class" in attrs_dict and "accent_color" in attrs_dict["class"]:
-                        self.current_link = attrs_dict["href"]
+                    href = attrs_dict.get("href")  # Kiểm tra nếu có 'href' mới lấy
+                    if href and "class" in attrs_dict and "accent_color" in attrs_dict["class"]:
+                        self.current_link = href
                         self.capture_text = True  
 
             def handle_data(self, data):
@@ -48,8 +49,8 @@ class HTMLParserHelper:
             def handle_starttag(self, tag, attrs):
                 if tag == "a" and not self.found_link:
                     attrs_dict = dict(attrs)
-                    href = attrs_dict.get("href", "")
-                    if "key=" in href:
+                    href = attrs_dict.get("href")  # Kiểm tra nếu có 'href'
+                    if href and "key=" in href:
                         self.found_link = href
 
         parser = KeyLinkParser()
@@ -60,8 +61,13 @@ class HTMLParserHelper:
 # ========== KẾT NỐI & TẢI DỮ LIỆU ==========
 client = HttpClient("https://www.apkmirror.com")
 
+# **Thêm User-Agent để tránh bị chặn**
+headers = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+}
+
 # Bước 1: Lấy link đầu tiên từ <a class="accent_color"> chứa "APK"
-response = client.get("/apk/google-inc/youtube/youtube-19-44-39-release/")
+response = client.get("/apk/google-inc/youtube/youtube-19-44-39-release/", headers=headers)
 if response["status_code"] == 200:
     apk_link = HTMLParserHelper.extract_first_apk_link(response["body"])
     if apk_link:
@@ -76,7 +82,7 @@ else:
     exit()
 
 # Bước 2: Lấy HTML từ link APK và tìm link chứa "key="
-response = client.get(apk_link)
+response = client.get(apk_link, headers=headers)
 if response["status_code"] == 200:
     key_link1 = HTMLParserHelper.extract_first_key_link(response["body"])
     if key_link1:
@@ -91,7 +97,7 @@ else:
     exit()
 
 # Bước 3: Lấy HTML từ link "key=" lần 1 và tìm link "key=" lần 2
-response = client.get(key_link1)
+response = client.get(key_link1, headers=headers)
 if response["status_code"] == 200:
     key_link2 = HTMLParserHelper.extract_first_key_link(response["body"])
     if key_link2:
@@ -106,7 +112,7 @@ else:
     exit()
 
 # Bước 4: Tải file từ link "key=" lần 2
-response = client.get(key_link2)
+response = client.get(key_link2, headers=headers)
 if response["status_code"] == 200:
     with open("youtube-v.19.44.39.apk", "wb") as f:
         f.write(response["body"])
