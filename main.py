@@ -11,19 +11,19 @@ class HTMLParserHelper:
         class APKLinkParser(HTMLParser):
             def __init__(self):
                 super().__init__()
-                self.last_valid_link = None  # Lưu link có 'android-apk-download/' ở cuối
+                self.last_valid_link = None
                 self.found_link = None  
 
             def handle_starttag(self, tag, attrs):
                 if tag == "a":
                     attrs_dict = dict(attrs)
-                    href = attrs_dict.get("href")  # Kiểm tra nếu có 'href'
+                    href = attrs_dict.get("href")
                     if href and href.endswith("android-apk-download/"):
-                        self.last_valid_link = href  # Cập nhật link hợp lệ gần nhất
+                        self.last_valid_link = href  
 
             def handle_data(self, data):
                 if "APK" in data and self.last_valid_link and not self.found_link:
-                    self.found_link = self.last_valid_link  # Khi gặp "APK", lấy link hợp lệ gần nhất
+                    self.found_link = self.last_valid_link  
 
         parser = APKLinkParser()
         parser.feed(html_data)
@@ -42,7 +42,7 @@ class HTMLParserHelper:
             def handle_starttag(self, tag, attrs):
                 if tag == "a" and not self.found_link:
                     attrs_dict = dict(attrs)
-                    href = attrs_dict.get("href")  # Kiểm tra nếu có 'href'
+                    href = attrs_dict.get("href")
                     if href and "key=" in href:
                         self.found_link = href
 
@@ -51,10 +51,22 @@ class HTMLParserHelper:
         return parser.found_link
 
 
+def follow_redirects(client, url, headers, max_redirects=5):
+    """Xử lý tự động chuyển hướng 302 để lấy URL cuối cùng."""
+    for _ in range(max_redirects):
+        response = client.get(url, headers=headers)
+        if response["status_code"] in (301, 302):  # Nếu bị redirect
+            url = response["headers"].get("Location")  # Lấy URL mới
+            if not url:
+                break
+        else:
+            return response  # Trả về response khi không còn redirect
+    return None  # Hết số lần redirect mà vẫn không tải được
+
+
 # ========== KẾT NỐI & TẢI DỮ LIỆU ==========
 client = HttpClient("https://www.apkmirror.com")
 
-# **Thêm User-Agent để tránh bị chặn**
 headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 }
@@ -104,14 +116,14 @@ else:
     client.close()
     exit()
 
-# Bước 4: Tải file từ link "key=" lần 2
-response = client.get(key_link2, headers=headers)
-if response["status_code"] == 200:
+# Bước 4: Tải file từ link "key=" lần 2 (xử lý redirect 302)
+response = follow_redirects(client, key_link2, headers)
+if response and response["status_code"] == 200:
     with open("youtube-v.19.44.39.apk", "wb") as f:
         f.write(response["body"])
     print("File đã được tải xuống thành công: youtube-v.19.44.39.apk")
 else:
-    print("Không thể tải file, mã lỗi:", response["status_code"])
+    print("Không thể tải file, mã lỗi:", response["status_code"] if response else "Redirect quá nhiều lần")
 
 # Đóng kết nối
 client.close()
